@@ -9,18 +9,14 @@
       display: block;
       margin: 0 auto;
       border: 2px solid #333;
+      touch-action: none;
     }
     body {
       background: #cceeff;
       font-family: sans-serif;
       text-align: center;
     }
-    #scoreDisplay {
-      font-size: 24px;
-      margin: 10px;
-      color: #333;
-    }
-    #recordDisplay {
+    #scoreDisplay, #recordDisplay {
       font-size: 24px;
       margin: 10px;
       color: #333;
@@ -45,7 +41,7 @@
       wiggle: 0
     };
 
-    const groundHeight = 40; // Высота травы
+    const groundHeight = 40;
     let needles = [];
     let clouds = [
       { x: 100, y: 50, speed: 0.5 },
@@ -63,9 +59,20 @@
       if (!paused) {
         const rect = canvas.getBoundingClientRect();
         const mouseY = e.clientY - rect.top;
-        ball.y = Math.min(mouseY, canvas.height - groundHeight - ball.radius);  // Ограничиваем движение шарика
+        ball.y = Math.min(mouseY, canvas.height - groundHeight - ball.radius);
       }
     });
+
+    // 👇 Поддержка пальца на телефоне
+    canvas.addEventListener("touchmove", (e) => {
+      if (!paused) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const touchY = touch.clientY - rect.top;
+        ball.y = Math.min(touchY, canvas.height - groundHeight - ball.radius);
+        e.preventDefault();
+      }
+    }, { passive: false });
 
     document.addEventListener("keydown", (e) => {
       if (e.code === "Space") {
@@ -75,20 +82,19 @@
 
     function spawnNeedle() {
       if (!paused && !gameOver) {
-        const height = 10;  // Толщина иглы
-        const width = 80;   // Длина иглы
+        const height = 10;
+        const width = 80;
         const y = Math.random() * (canvas.height - height - groundHeight - 20);
-        needles.push({ x: canvas.width + 20, y, width: width, height: height, speed: 6 });
+        needles.push({ x: canvas.width + 20, y, width, height, speed: 6 });
       }
     }
 
     function drawBall() {
       ball.wiggle += 0.1;
-
-      // Нитка (3 раза длиннее)
       const ropeX = ball.x + Math.sin(ball.wiggle) * 12;
       const ropeY = ball.y + 70;
 
+      // Нитка
       ctx.beginPath();
       ctx.moveTo(ball.x, ball.y + ball.radius);
       ctx.lineTo(ropeX, ropeY);
@@ -114,135 +120,6 @@
       ctx.stroke();
       ctx.closePath();
 
-      // Глазки
+      // Глаза
       ctx.beginPath();
-      ctx.arc(ball.x - 7, ball.y - 5, 2, 0, Math.PI * 2);
-      ctx.arc(ball.x + 7, ball.y - 5, 2, 0, Math.PI * 2);
-      ctx.fillStyle = "#000";
-      ctx.fill();
-      ctx.closePath();
-
-      // Горлышко
-      ctx.beginPath();
-      ctx.moveTo(ball.x - 4, ball.y + ball.radius);
-      ctx.lineTo(ball.x + 4, ball.y + ball.radius);
-      ctx.lineTo(ball.x + 8, ball.y + ball.radius + 10);
-      ctx.lineTo(ball.x - 8, ball.y + ball.radius + 10);
-      ctx.closePath();
-      ctx.fillStyle = "#8B4513";
-      ctx.fill();
-
-      // Бабочка
-      ctx.fillStyle = "#ff69b4";
-      ctx.beginPath();
-      ctx.ellipse(ball.x - 6, ball.y + ball.radius + 6, 4, 2, Math.PI / 4, 0, Math.PI * 2);
-      ctx.ellipse(ball.x + 6, ball.y + ball.radius + 6, 4, 2, -Math.PI / 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function drawNeedles() {
-      ctx.fillStyle = "#a0b0ff";  // Яркий металлический цвет для игл
-      ctx.strokeStyle = "#444";
-
-      for (let needle of needles) {
-        // Рисуем горизонтальную иглу
-        ctx.fillRect(needle.x, needle.y, needle.width, needle.height); // Игла горизонтальная
-      }
-    }
-
-    function drawClouds() {
-      ctx.fillStyle = "white";
-      clouds.forEach(cloud => {
-        ctx.beginPath();
-        ctx.ellipse(cloud.x, cloud.y, 30, 20, 0, 0, Math.PI * 2);
-        ctx.ellipse(cloud.x + 20, cloud.y + 5, 25, 15, 0, 0, Math.PI * 2);
-        ctx.ellipse(cloud.x - 20, cloud.y + 5, 25, 15, 0, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    function updateClouds() {
-      clouds.forEach(cloud => {
-        cloud.x -= cloud.speed;
-        if (cloud.x < -60) {
-          cloud.x = canvas.width + Math.random() * 100;
-          cloud.y = Math.random() * 80;
-        }
-      });
-    }
-
-    function drawGround() {
-      // Рисуем траву внизу экрана
-      ctx.fillStyle = "#32CD32"; // Цвет травы
-      ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
-    }
-
-    function resetGame() {
-      ball.y = canvas.height / 2;
-      needles = [];
-      score = 0;
-      scoreDisplay.textContent = "Очки: 0";
-      gameOver = false;
-    }
-
-    function update() {
-      if (paused || gameOver) return;
-
-      updateClouds();
-
-      for (let needle of needles) {
-        needle.x -= needle.speed;
-      }
-
-      needles = needles.filter(n => n.x > -40);
-
-      for (let needle of needles) {
-        const dx = ball.x - (needle.x + needle.width / 2);
-        const dy = ball.y - (needle.y + needle.height / 2);
-        const distX = Math.abs(dx);
-        const distY = Math.abs(dy);
-
-        if (distX < ball.radius + needle.width / 2 - 5 && distY < ball.radius + needle.height / 2 - 5) {
-          gameOver = true;
-          setTimeout(resetGame, 500);  // Перезапуск через 0.5 секунды
-          if (score > record) {
-            record = score;  // Обновление рекорда
-            recordDisplay.textContent = "Рекорд: " + record;
-          }
-          return;
-        }
-      }
-
-      if (Date.now() - lastScoreTime > 500) {
-        score += 1;
-        scoreDisplay.textContent = "Очки: " + score;
-        lastScoreTime = Date.now();
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawClouds();
-      drawGround();  // Рисуем траву
-      drawBall();
-      drawNeedles();
-
-      if (paused) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.font = "36px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Пауза", canvas.width / 2, canvas.height / 2);
-      }
-    }
-
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
-    }
-
-    setInterval(spawnNeedle, 1000);  // Спавним иглы каждую секунду
-    gameLoop();
-  </script>
-</body>
-</html>
+      ctx.arc(ball.x - 7, ball.y - 5, 2, 0,
